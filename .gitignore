@@ -27,3 +27,12 @@
 *.i*86
 *.x86_64
 *.hex
+
+.cntouch.ko.cmd
+.cntouch.mod.o.cmd
+.cntouch.o.cmd
+.tmp_versions/
+Module.symvers
+cntouch.mod.c
+modules.order
+
