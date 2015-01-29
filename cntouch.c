@@ -5,20 +5,23 @@
 #include <linux/usb.h>
 #include <linux/usb/input.h>
 
-#define DRIVER_AUTHOR "Thomas Sanchez, contact@thomas-sanchez.net"
-#define DRIVER_DESC "CNTouch USB Driver"
+#define USB_VENDOR_ID_FOXCONN		0x294e
+#define USB_DEVICE_ID_FOXCONN_CNTOUCH	0x1001
 
-#define CNTOUCH_VENDOR_ID 0x294e
-#define CNTOUCH_PRODUCT_ID 0x1001
+#define DRIVER_DESC	"CNTouch USB Driver"
 
 static const struct usb_device_id cntouch_devices[] = {
-	{ USB_DEVICE(CNTOUCH_VENDOR_ID, CNTOUCH_PRODUCT_ID) }, {}
+	{USB_DEVICE(USB_VENDOR_ID_FOXCONN, USB_DEVICE_ID_FOXCONN_CNTOUCH)},
+	{},
 };
+
+MODULE_AUTHOR("Thomas Sanchez, thomas.sanchz@gmail.com");
+MODULE_DESCRIPTION(DRIVER_DESC);
+MODULE_LICENSE("GPL");
 
 MODULE_DEVICE_TABLE(usb, cntouch_devices);
 
-struct cntouch_device
-{
+struct cntouch_device {
 	struct usb_device *usb_dev;
 	struct input_dev *input_dev;
 	struct urb *irq;
@@ -44,9 +47,6 @@ static void cntouch_irq(struct urb *urb)
 	default:
 		goto resubmit;
 	}
-
-        /*printk(KERN_WARNING "data[]: %i, %i, %i, %i, %i, %i, %i, %i\n", data[0],*/
-        /*data[1], data[2], data[3], data[4], data[5], data[6], data[7]);*/
 
 	input_report_key(dev, BTN_LEFT, data[0] & 0x01);
 	input_report_key(dev, BTN_RIGHT, data[0] & 0x02);
@@ -79,15 +79,15 @@ static int cntouch_open(struct input_dev *dev)
 	struct cntouch_device *cn_dev = input_get_drvdata(dev);
 
 	cn_dev->irq->dev = cn_dev->usb_dev;
-	if (usb_submit_urb(cn_dev->irq, GFP_KERNEL)) {
+	if (usb_submit_urb(cn_dev->irq, GFP_KERNEL))
 		return -EIO;
-	}
 	return 0;
 }
 
 static void cntouch_close(struct input_dev *dev)
 {
 	struct cntouch_device *cn_dev = input_get_drvdata(dev);
+
 	usb_kill_urb(cn_dev->irq);
 }
 
@@ -103,40 +103,34 @@ static int cntouch_probe(struct usb_interface *interface,
 
 	host_interface = interface->cur_altsetting;
 
-	if (host_interface->desc.bNumEndpoints != 1) {
+	if (host_interface->desc.bNumEndpoints != 1)
 		return -ENODEV;
-	}
 
 	endpoint = &host_interface->endpoint[0].desc;
-	if (!usb_endpoint_is_int_in(endpoint)) {
+	if (!usb_endpoint_is_int_in(endpoint))
 		return -ENODEV;
-	}
 
 	pipe = usb_rcvintpipe(usb_dev, endpoint->bEndpointAddress);
 	maxp = usb_maxpacket(usb_dev, pipe, usb_pipeout(pipe));
 
 	cn_dev = kzalloc(sizeof(*cn_dev), GFP_KERNEL);
-	if (cn_dev == NULL) {
+	if (cn_dev == NULL)
 		goto err_1;
-	}
 
 	cn_dev->input_dev = input_allocate_device();
-	if (!cn_dev->input_dev) {
+	if (!cn_dev->input_dev)
 		goto err_2;
-	}
 
 	cn_dev->usb_dev = usb_get_dev(usb_dev);
 
 	cn_dev->data =
 	    usb_alloc_coherent(usb_dev, 8, GFP_ATOMIC, &cn_dev->data_dma);
-	if (!cn_dev->data) {
+	if (!cn_dev->data)
 		goto err_3;
-	}
 
 	cn_dev->irq = usb_alloc_urb(0, GFP_KERNEL);
-	if (!cn_dev->irq) {
+	if (!cn_dev->irq)
 		goto err_4;
-	}
 
 	usb_set_intfdata(interface, cn_dev);
 
@@ -166,9 +160,9 @@ static int cntouch_probe(struct usb_interface *interface,
 	cn_dev->irq->transfer_flags |= URB_NO_TRANSFER_DMA_MAP;
 
 	error = input_register_device(cn_dev->input_dev);
-	if (error) {
+	if (error)
 		goto err_5;
-	}
+
 	dev_info(&interface->dev, DRIVER_DESC "device now attached\n");
 	return 0;
 
@@ -189,8 +183,8 @@ err_1:
 
 static void cntouch_disconnect(struct usb_interface *interface)
 {
-	struct cntouch_device *cn_dev;
-	cn_dev = usb_get_intfdata(interface);
+	struct cntouch_device *cn_dev = usb_get_intfdata(interface);
+
 	usb_kill_urb(cn_dev->irq);
 	input_unregister_device(cn_dev->input_dev);
 	usb_free_urb(cn_dev->irq);
@@ -203,14 +197,10 @@ static void cntouch_disconnect(struct usb_interface *interface)
 }
 
 static struct usb_driver cntouch_driver = {
-    .name = "CNTouch",
-    .probe = &cntouch_probe,
-    .disconnect = &cntouch_disconnect,
-    .id_table = cntouch_devices,
+	.name = "CNTouch",
+	.probe = &cntouch_probe,
+	.disconnect = &cntouch_disconnect,
+	.id_table = cntouch_devices,
 };
 
 module_usb_driver(cntouch_driver);
-
-MODULE_AUTHOR(DRIVER_AUTHOR);
-MODULE_DESCRIPTION(DRIVER_DESC);
-MODULE_LICENSE("GPL");
