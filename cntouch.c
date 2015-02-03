@@ -48,19 +48,17 @@ static void cntouch_irq(struct urb *urb)
 		goto resubmit;
 	}
 
-	input_report_key(dev, BTN_LEFT, data[0] & 0x01);
-	input_report_key(dev, BTN_RIGHT, data[0] & 0x02);
-
-	/*
-	 * when scrolling horizontally with two fingers, data[4] is used but I
-	 * did not find the right mapping...
-	 */
-	input_report_key(dev, BTN_TOOL_FINGER, data[4] == 0 ? 1 : 2);
-
 	input_report_rel(dev, REL_X, data[1]);
 	input_report_rel(dev, REL_Y, data[2]);
 
 	input_report_rel(dev, REL_WHEEL, data[3]);
+	input_report_rel(dev, REL_HWHEEL, data[4]);
+
+	input_report_key(dev, BTN_LEFT, data[0] & 0x01);
+	input_report_key(dev, BTN_RIGHT, data[0] & 0x02);
+
+	input_report_key(
+	    dev, data[4] == 0 ? BTN_TOOL_FINGER : BTN_TOOL_DOUBLETAP, 1);
 
 	input_sync(dev);
 
@@ -142,11 +140,19 @@ static int cntouch_probe(struct usb_interface *interface,
 	usb_to_input_id(usb_dev, &cn_dev->input_dev->id);
 	cn_dev->input_dev->dev.parent = &interface->dev;
 
-	cn_dev->input_dev->evbit[0] = BIT_MASK(EV_KEY) | BIT_MASK(EV_REL);
-	cn_dev->input_dev->keybit[BIT_WORD(BTN_MOUSE)] =
-	    BIT_MASK(BTN_LEFT) | BIT_MASK(BTN_RIGHT);
-	cn_dev->input_dev->relbit[0] =
-	    BIT_MASK(REL_X) | BIT_MASK(REL_Y) | BIT_MASK(REL_WHEEL);
+	__set_bit(EV_REL, cn_dev->input_dev->evbit);
+	__set_bit(EV_KEY, cn_dev->input_dev->evbit);
+
+	__set_bit(BTN_MOUSE          , cn_dev->input_dev->keybit);
+	__set_bit(BTN_LEFT           , cn_dev->input_dev->keybit);
+	__set_bit(BTN_RIGHT          , cn_dev->input_dev->keybit);
+	__set_bit(BTN_TOOL_FINGER    , cn_dev->input_dev->keybit);
+	__set_bit(BTN_TOOL_DOUBLETAP , cn_dev->input_dev->keybit);
+
+	__set_bit(REL_X      , cn_dev->input_dev->relbit);
+	__set_bit(REL_Y      , cn_dev->input_dev->relbit);
+	__set_bit(REL_WHEEL  , cn_dev->input_dev->relbit);
+	__set_bit(REL_HWHEEL , cn_dev->input_dev->relbit);
 
 	input_set_drvdata(cn_dev->input_dev, cn_dev);
 
