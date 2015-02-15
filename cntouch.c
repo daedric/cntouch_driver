@@ -171,16 +171,16 @@ static int cntouch_probe(struct usb_interface *interface,
 	__set_bit(EV_REL, cn_dev->input_dev->evbit);
 	__set_bit(EV_KEY, cn_dev->input_dev->evbit);
 
-	__set_bit(BTN_MOUSE          , cn_dev->input_dev->keybit);
-	__set_bit(BTN_LEFT           , cn_dev->input_dev->keybit);
-	__set_bit(BTN_RIGHT          , cn_dev->input_dev->keybit);
-	__set_bit(BTN_TOOL_FINGER    , cn_dev->input_dev->keybit);
-	__set_bit(BTN_TOOL_DOUBLETAP , cn_dev->input_dev->keybit);
+	__set_bit(BTN_MOUSE, cn_dev->input_dev->keybit);
+	__set_bit(BTN_LEFT, cn_dev->input_dev->keybit);
+	__set_bit(BTN_RIGHT, cn_dev->input_dev->keybit);
+	__set_bit(BTN_TOOL_FINGER, cn_dev->input_dev->keybit);
+	__set_bit(BTN_TOOL_DOUBLETAP, cn_dev->input_dev->keybit);
 
-	__set_bit(REL_X      , cn_dev->input_dev->relbit);
-	__set_bit(REL_Y      , cn_dev->input_dev->relbit);
-	__set_bit(REL_WHEEL  , cn_dev->input_dev->relbit);
-	__set_bit(REL_HWHEEL , cn_dev->input_dev->relbit);
+	__set_bit(REL_X, cn_dev->input_dev->relbit);
+	__set_bit(REL_Y, cn_dev->input_dev->relbit);
+	__set_bit(REL_WHEEL, cn_dev->input_dev->relbit);
+	__set_bit(REL_HWHEEL, cn_dev->input_dev->relbit);
 
 	input_set_drvdata(cn_dev->input_dev, cn_dev);
 
