@@ -1,3 +1,26 @@
+/*
+ *  Copyright (c) 2015-2016 Thomas Sanchez
+ *
+ *  CNTouch driver
+ */
+
+/*
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
+ *
+ */
+
 #include <linux/kernel.h>
 #include <linux/errno.h>
 #include <linux/slab.h>
@@ -76,7 +99,6 @@ static int cntouch_open(struct input_dev *dev)
 {
 	struct cntouch_device *cn_dev = input_get_drvdata(dev);
 
-	cn_dev->irq->dev = cn_dev->usb_dev;
 	if (usb_submit_urb(cn_dev->irq, GFP_KERNEL))
 		return -EIO;
 	return 0;
@@ -93,11 +115,11 @@ static int cntouch_probe(struct usb_interface *interface,
 			 const struct usb_device_id *id)
 {
 	struct usb_device *usb_dev = interface_to_usbdev(interface);
-	struct cntouch_device *cn_dev = NULL;
+	struct cntouch_device *cn_dev;
 	struct usb_host_interface *host_interface;
 	struct usb_endpoint_descriptor *endpoint;
 	int pipe, maxp;
-	int error = -ENOMEM;
+	int error;
 
 	host_interface = interface->cur_altsetting;
 
@@ -112,23 +134,29 @@ static int cntouch_probe(struct usb_interface *interface,
 	maxp = usb_maxpacket(usb_dev, pipe, usb_pipeout(pipe));
 
 	cn_dev = kzalloc(sizeof(*cn_dev), GFP_KERNEL);
-	if (cn_dev == NULL)
+	if (cn_dev == NULL) {
+		error = -ENOMEM;
 		goto err_1;
+	}
 
 	cn_dev->input_dev = input_allocate_device();
-	if (!cn_dev->input_dev)
+	if (!cn_dev->input_dev) {
+		error = -ENOMEM;
 		goto err_2;
-
-	cn_dev->usb_dev = usb_get_dev(usb_dev);
+	}
 
 	cn_dev->data =
 	    usb_alloc_coherent(usb_dev, 8, GFP_ATOMIC, &cn_dev->data_dma);
-	if (!cn_dev->data)
+	if (!cn_dev->data) {
+		error = -ENOMEM;
 		goto err_3;
+	}
 
 	cn_dev->irq = usb_alloc_urb(0, GFP_KERNEL);
-	if (!cn_dev->irq)
+	if (!cn_dev->irq) {
+		error = -ENOMEM;
 		goto err_4;
+	}
 
 	usb_set_intfdata(interface, cn_dev);
 
@@ -169,7 +197,6 @@ static int cntouch_probe(struct usb_interface *interface,
 	if (error)
 		goto err_5;
 
-	dev_info(&interface->dev, DRIVER_DESC "device now attached\n");
 	return 0;
 
 err_5:
@@ -183,7 +210,6 @@ err_2:
 	usb_put_dev(cn_dev->usb_dev);
 	kfree(cn_dev);
 err_1:
-	dev_err(&interface->dev, "out of memory\n");
 	return error;
 }
 
@@ -191,15 +217,12 @@ static void cntouch_disconnect(struct usb_interface *interface)
 {
 	struct cntouch_device *cn_dev = usb_get_intfdata(interface);
 
-	usb_kill_urb(cn_dev->irq);
 	input_unregister_device(cn_dev->input_dev);
 	usb_free_urb(cn_dev->irq);
 	usb_free_coherent(cn_dev->usb_dev, 8, cn_dev->data, cn_dev->data_dma);
 	usb_set_intfdata(interface, NULL);
 	usb_put_dev(cn_dev->usb_dev);
-	input_free_device(cn_dev->input_dev);
 	kfree(cn_dev);
-	dev_info(&interface->dev, DRIVER_DESC " now disconnected\n");
 }
 
 static struct usb_driver cntouch_driver = {
