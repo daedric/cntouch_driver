@@ -62,10 +62,14 @@ static void cntouch_irq(struct urb *urb)
 	case -ECONNRESET:
 	case -ENOENT:
 	case -ESHUTDOWN:
+		printk(KERN_WARNING "IRQ error error: %d\n", urb->status);
 		return;
 	default:
 		goto resubmit;
 	}
+
+	printk(KERN_WARNING "Data array [%d, %d, %d, %d, %d]\n", data[0],
+	       data[1], data[2], data[3], data[4]);
 
 	input_report_rel(dev, REL_X, data[1]);
 	input_report_rel(dev, REL_Y, data[2]);
@@ -95,8 +99,10 @@ static int cntouch_open(struct input_dev *dev)
 {
 	struct cntouch_device *cn_dev = input_get_drvdata(dev);
 
-	if (usb_submit_urb(cn_dev->irq, GFP_KERNEL))
+	if (usb_submit_urb(cn_dev->irq, GFP_KERNEL)) {
+		printk(KERN_WARNING "Cannot submit urb\n");
 		return -EIO;
+    }
 	return 0;
 }
 
@@ -104,6 +110,7 @@ static void cntouch_close(struct input_dev *dev)
 {
 	struct cntouch_device *cn_dev = input_get_drvdata(dev);
 
+	printk(KERN_WARNING "Close device + kill urb\n");
 	usb_kill_urb(cn_dev->irq);
 }
 
@@ -212,6 +219,8 @@ err_1:
 static void cntouch_disconnect(struct usb_interface *interface)
 {
 	struct cntouch_device *cn_dev = usb_get_intfdata(interface);
+
+	printk(KERN_WARNING "Device disconnected\n");
 
 	input_unregister_device(cn_dev->input_dev);
 	usb_free_urb(cn_dev->irq);
