@@ -30,6 +30,12 @@ endif
 clean:
 	rm -rf *.o *~ core .depend .*.cmd *.ko *.mod.c .tmp_versions
 
+install:
+	sudo cp cntouch.ko /lib/modules/$(shell uname -r)/kernel/drivers/input
+	sudo depmod
+	sudo update-initramfs -u
+
+
 depend .depend dep:
 	$(CC) $(CFLAGS) -M *.c > .depend
 
